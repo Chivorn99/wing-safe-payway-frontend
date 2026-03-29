@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { login } from '@/lib/api';
-import { useAuth } from '@/lib/AuthContext';
-import toast from 'react-hot-toast';
-import Link from 'next/link';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { login } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
+import toast from "react-hot-toast";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -25,9 +25,9 @@ export default function LoginPage() {
         token: res.data.token,
       });
       toast.success(`Welcome back, ${res.data.fullName}!`);
-      router.push('/scan');
+      router.push("/scan");
     } catch {
-      toast.error('Invalid phone number or password');
+      toast.error("Invalid phone number or password");
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
-
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
@@ -84,14 +83,17 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-blue-600 font-medium hover:underline">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/register"
+            className="text-blue-600 font-medium hover:underline"
+          >
             Register
           </Link>
         </p>

@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { register } from '@/lib/api';
-import { useAuth } from '@/lib/AuthContext';
-import toast from 'react-hot-toast';
-import Link from 'next/link';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { register } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
+import toast from "react-hot-toast";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { setUser } = useAuth();
-  const [fullName, setFullName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -25,10 +25,10 @@ export default function RegisterPage() {
         fullName: res.data.fullName,
         token: res.data.token,
       });
-      toast.success('Account created successfully!');
-      router.push('/scan');
+      toast.success("Account created successfully!");
+      router.push("/scan");
     } catch {
-      toast.error('Registration failed. Phone may already be used.');
+      toast.error("Registration failed. Phone may already be used.");
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,6 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
-
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
@@ -100,14 +99,17 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 font-medium hover:underline">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="text-blue-600 font-medium hover:underline"
+          >
             Sign in
           </Link>
         </p>

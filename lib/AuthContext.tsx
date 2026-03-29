@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState } from "react";
 
 interface AuthUser {
   userId: number;
@@ -22,19 +22,19 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const stored = localStorage.getItem('user');
+    if (typeof window === "undefined") return null;
+    const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
   });
 
   const handleSetUser = (u: AuthUser | null) => {
     setUser(u);
     if (u) {
-      localStorage.setItem('user', JSON.stringify(u));
-      localStorage.setItem('token', u.token);
+      localStorage.setItem("user", JSON.stringify(u));
+      localStorage.setItem("token", u.token);
     } else {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
     }
   };
 
