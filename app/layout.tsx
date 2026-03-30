@@ -1,11 +1,11 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { AuthProvider } from '@/lib/AuthContext';
-import { Toaster } from 'react-hot-toast';
+import type { Metadata } from "next";
+import "./globals.css";
+import { AuthProvider } from "@/lib/AuthContext";
+import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: 'Wing SafePay',
-  description: 'Pay safely with Wing',
+  title: "WingView",
+  description: "Smart spending insights and receipt tracking",
 };
 
 export default function RootLayout({
