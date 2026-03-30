@@ -1,225 +1,189 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getTransactions, getSpendingSummary } from "@/lib/api";
-import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
+import toast from "react-hot-toast";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import type { ValueType } from "recharts/types/component/DefaultTooltipContent";
+  BarChart3,
+  Camera,
+  FileImage,
+  LogOut,
+  PencilLine,
+  Receipt,
+} from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useAuth } from "@/lib/AuthContext";
+import { apiClient, type DashboardSummary } from "@/lib/api";
 
-const COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
-];
-
-const riskBadge = {
-  SAFE: {
-    label: "Safe",
-    icon: ShieldCheck,
-    className: "bg-green-100 text-green-700",
-  },
-  WARNING: {
-    label: "Warning",
-    icon: ShieldAlert,
-    className: "bg-yellow-100 text-yellow-700",
-  },
-  HIGH_RISK: {
-    label: "High Risk",
-    icon: ShieldX,
-    className: "bg-red-100 text-red-700",
-  },
-};
-
-type RiskLevel = keyof typeof riskBadge;
-
-type Transaction = {
-  recipientName?: string | null;
-  recipientBank?: string | null;
-  category?: string | null;
-  amount: number;
-  riskLevel?: RiskLevel | null;
-};
-
-type SpendingSummary = {
-  totalTransactions: number;
-  suspiciousBlocked: number;
-  byCategory?: Record<string, number>;
-};
+const COLORS = ["#0f766e", "#155e75", "#1d4ed8", "#7c3aed", "#b45309"];
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [summary, setSummary] = useState<SpendingSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    const fetchData = async () => {
+    if (!loading && !user) router.replace("/login");
+  }, [loading, user, router]);
+
+  useEffect(() => {
+    const load = async () => {
       try {
-        const [txRes, sumRes] = await Promise.all([
-          getTransactions(user.userId),
-          getSpendingSummary(user.userId),
-        ]);
-        setTransactions((txRes.data ?? []) as Transaction[]);
-        setSummary(sumRes.data as SpendingSummary);
+        const data = await apiClient.getDashboard();
+        setSummary(data);
+      } catch (error: unknown) {
+        const axiosError = error as {
+          response?: { data?: { message?: string } };
+        };
+        toast.error(
+          axiosError?.response?.data?.message || "Failed to load dashboard",
+        );
       } finally {
-        setLoading(false);
+        setFetching(false);
       }
     };
-    fetchData();
-  }, [user, router]);
 
-  const chartData: Array<{ name: string; value: number }> = summary?.byCategory
-    ? Object.entries(summary.byCategory).map(([name, value]) => ({
-        name,
-        value,
-      }))
-    : [];
+    if (user) load();
+  }, [user]);
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
+
+  if (loading || !user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => router.push("/scan")}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <ArrowLeft size={18} className="text-gray-600" />
-        </button>
+    <main className="app-shell">
+      <header className="topbar">
         <div>
-          <h1 className="font-semibold text-gray-800">Spending Dashboard</h1>
-          <p className="text-xs text-gray-500">{user?.fullName}</p>
+          <div className="brand-badge">WingView</div>
+          <h1>Dashboard</h1>
+          <p className="muted">Welcome back, {user.name}</p>
         </div>
-      </nav>
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-4">
-        {/* Summary Cards */}
-        {summary && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs text-gray-500 mb-1">Total Transactions</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {summary.totalTransactions}
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs text-gray-500 mb-1">Suspicious Blocked</p>
-              <p className="text-2xl font-bold text-red-500">
-                {summary.suspiciousBlocked}
-              </p>
-            </div>
+        <div className="topbar-actions">
+          <Link className="ghost-btn" href="/scan">
+            <Receipt size={18} />
+            Add receipt
+          </Link>
+          <button className="ghost-btn" onClick={handleLogout}>
+            <LogOut size={18} />
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <section className="quick-actions">
+        <Link href="/scan?mode=manual" className="action-card">
+          <PencilLine size={20} />
+          <div>
+            <strong>Manual input</strong>
+            <span>Enter transaction yourself</span>
           </div>
-        )}
+        </Link>
 
-        {/* Pie Chart */}
-        {chartData.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="font-semibold text-gray-800 mb-4">
-              Spending by Category
-            </h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {chartData.map((_, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: ValueType | undefined) => {
-                    const numericValue =
-                      typeof value === "number" ? value : Number(value ?? 0);
-                    return `$${(Number.isFinite(numericValue) ? numericValue : 0).toFixed(2)}`;
-                  }}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+        <Link href="/scan?mode=upload" className="action-card">
+          <FileImage size={20} />
+          <div>
+            <strong>Upload receipt</strong>
+            <span>OCR auto-fills fields</span>
           </div>
-        )}
+        </Link>
 
-        {/* Transaction History */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">
-            Transaction History
-          </h3>
+        <Link href="/scan?mode=camera" className="action-card">
+          <Camera size={20} />
+          <div>
+            <strong>Use camera</strong>
+            <span>Take a picture in browser</span>
+          </div>
+        </Link>
+      </section>
 
-          {loading ? (
-            <p className="text-sm text-gray-400 text-center py-4">Loading...</p>
-          ) : transactions.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">
-              No transactions yet
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {transactions.map((tx, i) => {
-                const risk = tx.riskLevel ? riskBadge[tx.riskLevel] : undefined;
-                const RiskIcon = risk?.icon;
-                return (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
-                        <span className="text-xs font-bold text-blue-600">
-                          {tx.recipientName?.[0] ?? "?"}
-                        </span>
-                      </div>
+      {fetching ? (
+        <div className="panel">
+          <p className="muted">Loading dashboard...</p>
+        </div>
+      ) : (
+        <>
+          <section className="stats-grid">
+            <article className="stat-card">
+              <span>Total spent</span>
+              <strong>${Number(summary?.totalSpent || 0).toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>This month</span>
+              <strong>${Number(summary?.monthlySpent || 0).toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Receipts scanned</span>
+              <strong>{summary?.receiptCount || 0}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Manual entries</span>
+              <strong>{summary?.manualCount || 0}</strong>
+            </article>
+          </section>
+
+          <section className="dashboard-grid">
+            <article className="panel chart-panel">
+              <div className="panel-head">
+                <h2>Top categories</h2>
+                <BarChart3 size={18} />
+              </div>
+
+              {summary?.topCategories?.length ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={summary.topCategories}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={90}
+                    >
+                      {summary.topCategories.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="muted">No category data yet.</p>
+              )}
+            </article>
+
+            <article className="panel">
+              <div className="panel-head">
+                <h2>Recent transactions</h2>
+              </div>
+
+              <div className="tx-list">
+                {summary?.recentTransactions?.length ? (
+                  summary.recentTransactions.map((tx) => (
+                    <div className="tx-item" key={tx.id}>
                       <div>
-                        <p className="text-sm font-medium text-gray-800">
-                          {tx.recipientName}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {tx.category} · {tx.recipientBank}
+                        <strong>{tx.merchantName}</strong>
+                        <p className="muted">
+                          {tx.category} · {tx.source} · {tx.transactionDate}
                         </p>
                       </div>
+                      <span>${Number(tx.totalAmount).toFixed(2)}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-800">
-                        ${tx.amount}
-                      </p>
-                      {risk && RiskIcon && (
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${risk.className}`}
-                        >
-                          <RiskIcon size={10} />
-                          {risk.label}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+                  ))
+                ) : (
+                  <p className="muted">No transactions yet.</p>
+                )}
+              </div>
+            </article>
+          </section>
+        </>
+      )}
+    </main>
   );
 }

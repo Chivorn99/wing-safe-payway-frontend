@@ -1,49 +1,105 @@
-import axios from 'axios';
+import axios from "axios";
+
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type AuthResponse = {
+  token: string;
+  user: User;
+};
+
+export type ReceiptLineItem = {
+  name: string;
+  quantity?: number;
+  price?: number;
+};
+
+export type ReceiptDraft = {
+  merchantName: string;
+  totalAmount: number | "";
+  transactionDate: string;
+  category: string;
+  note: string;
+  paymentMethod: string;
+  source: "manual" | "upload" | "camera";
+  imageUrl?: string;
+  lineItems?: ReceiptLineItem[];
+};
+
+export type DashboardSummary = {
+  totalSpent: number;
+  monthlySpent: number;
+  receiptCount: number;
+  manualCount: number;
+  topCategories: { name: string; value: number }[];
+  recentTransactions: {
+    id: string;
+    merchantName: string;
+    totalAmount: number;
+    transactionDate: string;
+    category: string;
+    source: string;
+  }[];
+};
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8081/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// Auto-attach token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+export function setAuthToken(token: string | null) {
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
   }
-  return config;
-});
+}
 
-// Auth
-export const register = (fullName: string, phoneNumber: string, password: string) =>
-  api.post(`/api/auth/register?fullName=${encodeURIComponent(fullName)}`, {
-    phoneNumber,
-    password,
-  });
+export const apiClient = {
+  async login(payload: { email: string; password: string }) {
+    const { data } = await api.post<AuthResponse>("/auth/login", payload);
+    return data;
+  },
 
-export const login = (phoneNumber: string, password: string) =>
-  api.post('/api/auth/login', { phoneNumber, password });
+  async register(payload: { name: string; email: string; password: string }) {
+    const { data } = await api.post<AuthResponse>("/auth/register", payload);
+    return data;
+  },
 
-// QR
-export const verifyQR = (data: {
-  merchantId: string;
-  displayedName: string;
-  bankName: string;
-  amount: number;
-  currency: string;
-  qrType: string;
-}) => api.post('/api/qr/verify', data);
+  async getMe() {
+    const { data } = await api.get<User>("/auth/me");
+    return data;
+  },
 
-// Transactions
-export const saveTransaction = (data: object) =>
-  api.post('/api/transactions', data);
+  async getDashboard() {
+    const { data } = await api.get<DashboardSummary>("/dashboard/summary");
+    return data;
+  },
 
-export const getTransactions = (userId: number) =>
-  api.get(`/api/transactions/user/${userId}`);
+  async scanReceipt(file: File, source: "upload" | "camera") {
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("source", source);
 
-export const getSpendingSummary = (userId: number) =>
-  api.get(`/api/transactions/user/${userId}/summary`);
+    const { data } = await api.post<ReceiptDraft>("/receipts/scan", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
-export default api;
+    return data;
+  },
+
+  async saveManualTransaction(payload: ReceiptDraft) {
+    const { data } = await api.post("/transactions/manual", payload);
+    return data;
+  },
+
+  async saveReceiptTransaction(payload: ReceiptDraft) {
+    const { data } = await api.post("/transactions/from-receipt", payload);
+    return data;
+  },
+};

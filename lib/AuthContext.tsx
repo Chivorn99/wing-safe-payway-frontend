@@ -1,50 +1,129 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { apiClient, setAuthToken, type User } from "./api";
 
-interface AuthUser {
-  userId: number;
-  fullName: string;
-  token: string;
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
-  setUser: (user: AuthUser | null) => void;
+type AuthContextType = {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  login: (payload: { email: string; password: string }) => Promise<void>;
+  register: (payload: {
+    name: string;
+    email: string;
+    password: string;
+  }) => Promise<void>;
   logout: () => void;
-}
+  refreshMe: () => Promise<void>;
+};
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  setUser: () => {},
-  logout: () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const TOKEN_KEY = "wingview_token";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    const stored = localStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleSetUser = (u: AuthUser | null) => {
-    setUser(u);
-    if (u) {
-      localStorage.setItem("user", JSON.stringify(u));
-      localStorage.setItem("token", u.token);
+  const persistToken = (value: string | null) => {
+    if (typeof window === "undefined") return;
+    if (value) {
+      localStorage.setItem(TOKEN_KEY, value);
     } else {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+      localStorage.removeItem(TOKEN_KEY);
     }
   };
 
-  const logout = () => handleSetUser(null);
+  const refreshMe = useCallback(async () => {
+    try {
+      const me = await apiClient.getMe();
+      setUser(me);
+    } catch {
+      setUser(null);
+      setToken(null);
+      setAuthToken(null);
+      persistToken(null);
+    }
+  }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, setUser: handleSetUser, logout }}>
-      {children}
-    </AuthContext.Provider>
+  useEffect(() => {
+    const boot = async () => {
+      if (typeof window === "undefined") return;
+
+      const savedToken = localStorage.getItem(TOKEN_KEY);
+      if (!savedToken) {
+        setLoading(false);
+        return;
+      }
+
+      setToken(savedToken);
+      setAuthToken(savedToken);
+
+      try {
+        const me = await apiClient.getMe();
+        setUser(me);
+      } catch {
+        setToken(null);
+        setUser(null);
+        setAuthToken(null);
+        persistToken(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    boot();
+  }, []);
+
+  const login = useCallback(
+    async (payload: { email: string; password: string }) => {
+      const res = await apiClient.login(payload);
+      setToken(res.token);
+      setUser(res.user);
+      setAuthToken(res.token);
+      persistToken(res.token);
+    },
+    []
   );
+
+  const register = useCallback(
+    async (payload: { name: string; email: string; password: string }) => {
+      const res = await apiClient.register(payload);
+      setToken(res.token);
+      setUser(res.user);
+      setAuthToken(res.token);
+      persistToken(res.token);
+    },
+    []
+  );
+
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    setAuthToken(null);
+    persistToken(null);
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, token, loading, login, register, logout, refreshMe }),
+    [user, token, loading, login, register, logout, refreshMe]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+  return ctx;
+}
