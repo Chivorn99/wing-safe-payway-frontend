@@ -8,122 +8,121 @@ import {
   useMemo,
   useState,
 } from "react";
-import { apiClient, setAuthToken, type User } from "./api";
+import {
+  login as loginApi,
+  register as registerApi,
+  setAuthToken,
+  type AuthResponse,
+} from "./api";
+
+type StoredUser = {
+  userId: number;
+  fullName: string;
+};
 
 type AuthContextType = {
-  user: User | null;
+  user: StoredUser | null;
   token: string | null;
   loading: boolean;
-  login: (payload: { email: string; password: string }) => Promise<void>;
-  register: (payload: {
-    name: string;
-    email: string;
-    password: string;
-  }) => Promise<void>;
+  login: (phoneNumber: string, password: string) => Promise<void>;
+  register: (
+    fullName: string,
+    phoneNumber: string,
+    password: string
+  ) => Promise<void>;
   logout: () => void;
-  refreshMe: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = "wingview_token";
+const USER_KEY = "wingview_user";
+
+function persistAuth(data: AuthResponse) {
+  localStorage.setItem(TOKEN_KEY, data.token);
+  localStorage.setItem(
+    USER_KEY,
+    JSON.stringify({
+      userId: data.userId,
+      fullName: data.fullName,
+    })
+  );
+}
+
+function clearAuth() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<StoredUser | null>(null);
+  const [token, setTokenState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const persistToken = (value: string | null) => {
-    if (typeof window === "undefined") return;
-    if (value) {
-      localStorage.setItem(TOKEN_KEY, value);
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-    }
-  };
-
-  const refreshMe = useCallback(async () => {
-    try {
-      const me = await apiClient.getMe();
-      setUser(me);
-    } catch {
-      setUser(null);
-      setToken(null);
-      setAuthToken(null);
-      persistToken(null);
-    }
-  }, []);
-
   useEffect(() => {
-    const boot = async () => {
-      if (typeof window === "undefined") return;
+    const savedToken = localStorage.getItem(TOKEN_KEY);
+    const savedUser = localStorage.getItem(USER_KEY);
 
-      const savedToken = localStorage.getItem(TOKEN_KEY);
-      if (!savedToken) {
-        setLoading(false);
-        return;
-      }
-
-      setToken(savedToken);
+    if (savedToken) {
+      setTokenState(savedToken);
       setAuthToken(savedToken);
+    }
 
+    if (savedUser) {
       try {
-        const me = await apiClient.getMe();
-        setUser(me);
+        setUser(JSON.parse(savedUser));
       } catch {
-        setToken(null);
-        setUser(null);
-        setAuthToken(null);
-        persistToken(null);
-      } finally {
-        setLoading(false);
+        clearAuth();
       }
-    };
+    }
 
-    boot();
+    setLoading(false);
   }, []);
 
-  const login = useCallback(
-    async (payload: { email: string; password: string }) => {
-      const res = await apiClient.login(payload);
-      setToken(res.token);
-      setUser(res.user);
-      setAuthToken(res.token);
-      persistToken(res.token);
-    },
-    []
-  );
+  const login = useCallback(async (phoneNumber: string, password: string) => {
+    const data = await loginApi({ phoneNumber, password });
+    persistAuth(data);
+    setTokenState(data.token);
+    setAuthToken(data.token);
+    setUser({
+      userId: data.userId,
+      fullName: data.fullName,
+    });
+  }, []);
 
   const register = useCallback(
-    async (payload: { name: string; email: string; password: string }) => {
-      const res = await apiClient.register(payload);
-      setToken(res.token);
-      setUser(res.user);
-      setAuthToken(res.token);
-      persistToken(res.token);
+    async (fullName: string, phoneNumber: string, password: string) => {
+      const data = await registerApi({ fullName, phoneNumber, password });
+      persistAuth(data);
+      setTokenState(data.token);
+      setAuthToken(data.token);
+      setUser({
+        userId: data.userId,
+        fullName: data.fullName,
+      });
     },
     []
   );
 
   const logout = useCallback(() => {
-    setToken(null);
-    setUser(null);
+    clearAuth();
     setAuthToken(null);
-    persistToken(null);
+    setTokenState(null);
+    setUser(null);
   }, []);
 
   const value = useMemo(
-    () => ({ user, token, loading, login, register, logout, refreshMe }),
-    [user, token, loading, login, register, logout, refreshMe]
+    () => ({ user, token, loading, login, register, logout }),
+    [user, token, loading, login, register, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside AuthProvider");
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
   }
-  return ctx;
+  return context;
 }

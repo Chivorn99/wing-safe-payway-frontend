@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -10,27 +10,26 @@ export default function LoginPage() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
+    if (!loading && user) {
+      router.replace("/dashboard");
+    }
   }, [loading, user, router]);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      await login(form);
-      toast.success("Welcome back");
+      await login(phoneNumber, password);
+      toast.success("Login successful");
       router.replace("/dashboard");
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
+      const errorMessage = error instanceof Error ? error.message : "Login failed";
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -41,22 +40,17 @@ export default function LoginPage() {
     <main className="auth-shell">
       <section className="auth-card">
         <div className="brand-badge">WingView</div>
-        <h1>Sign in</h1>
-        <p className="muted">
-          Upload receipts, auto-fill transactions, and correct anything before
-          saving.
-        </p>
+        <h1>Login</h1>
+        <p className="muted">Sign in with your phone number and password.</p>
 
-        <form onSubmit={onSubmit} className="form-stack">
+        <form className="form-stack" onSubmit={handleSubmit}>
           <label className="field">
-            <span>Email</span>
+            <span>Phone number</span>
             <input
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, email: e.target.value }))
-              }
+              type="text"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="012345678"
               required
             />
           </label>
@@ -65,22 +59,20 @@ export default function LoginPage() {
             <span>Password</span>
             <input
               type="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, password: e.target.value }))
-              }
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
               required
             />
           </label>
 
-          <button className="primary-btn" type="submit" disabled={submitting}>
+          <button type="submit" className="primary-btn" disabled={submitting}>
             {submitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
         <p className="auth-footer">
-          Don’t have an account? <Link href="/register">Create one</Link>
+          No account yet? <Link href="/register">Register</Link>
         </p>
       </section>
     </main>

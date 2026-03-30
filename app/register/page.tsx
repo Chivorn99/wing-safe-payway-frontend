@@ -10,29 +10,28 @@ export default function RegisterPage() {
   const { register, user, loading } = useAuth();
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
+  const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
+    if (!loading && user) {
+      router.replace("/dashboard");
+    }
   }, [loading, user, router]);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      await register(form);
-      toast.success("Account created");
+      await register(fullName, phoneNumber, password);
+      toast.success("Registration successful");
       router.replace("/dashboard");
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Registration failed";
-      toast.error(message);
+      const errorMessage = error instanceof Error ? error.message : "Registration failed";
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -43,31 +42,27 @@ export default function RegisterPage() {
       <section className="auth-card">
         <div className="brand-badge">WingView</div>
         <h1>Create account</h1>
-        <p className="muted">
-          Start tracking spending with manual entry, uploads, and camera scan.
-        </p>
+        <p className="muted">Register as a normal user.</p>
 
-        <form onSubmit={onSubmit} className="form-stack">
+        <form className="form-stack" onSubmit={handleSubmit}>
           <label className="field">
-            <span>Name</span>
+            <span>Full name</span>
             <input
               type="text"
-              placeholder="Your name"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Your full name"
               required
             />
           </label>
 
           <label className="field">
-            <span>Email</span>
+            <span>Phone number</span>
             <input
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, email: e.target.value }))
-              }
+              type="text"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="012345678"
               required
             />
           </label>
@@ -76,22 +71,20 @@ export default function RegisterPage() {
             <span>Password</span>
             <input
               type="password"
-              placeholder="Create a password"
-              value={form.password}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, password: e.target.value }))
-              }
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create password"
               required
             />
           </label>
 
-          <button className="primary-btn" type="submit" disabled={submitting}>
+          <button type="submit" className="primary-btn" disabled={submitting}>
             {submitting ? "Creating..." : "Create account"}
           </button>
         </form>
 
         <p className="auth-footer">
-          Already have an account? <Link href="/login">Sign in</Link>
+          Already registered? <Link href="/login">Login</Link>
         </p>
       </section>
     </main>
