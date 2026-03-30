@@ -15,13 +15,13 @@ import {
   type AuthResponse,
 } from "./api";
 
-type StoredUser = {
+type UserSession = {
   userId: number;
   fullName: string;
 };
 
 type AuthContextType = {
-  user: StoredUser | null;
+  user: UserSession | null;
   token: string | null;
   loading: boolean;
   login: (phoneNumber: string, password: string) => Promise<void>;
@@ -38,7 +38,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const TOKEN_KEY = "wingview_token";
 const USER_KEY = "wingview_user";
 
-function persistAuth(data: AuthResponse) {
+function saveSession(data: AuthResponse) {
   localStorage.setItem(TOKEN_KEY, data.token);
   localStorage.setItem(
     USER_KEY,
@@ -49,41 +49,50 @@ function persistAuth(data: AuthResponse) {
   );
 }
 
-function clearAuth() {
+function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 
+function getInitialToken() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function getInitialUser() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedUser = localStorage.getItem(USER_KEY);
+  if (!storedUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedUser) as UserSession;
+  } catch {
+    clearSession();
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<StoredUser | null>(null);
-  const [token, setTokenState] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserSession | null>(() => getInitialUser());
+  const [token, setToken] = useState<string | null>(() => getInitialToken());
+  const loading = false;
 
   useEffect(() => {
-    const savedToken = localStorage.getItem(TOKEN_KEY);
-    const savedUser = localStorage.getItem(USER_KEY);
-
-    if (savedToken) {
-      setTokenState(savedToken);
-      setAuthToken(savedToken);
-    }
-
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch {
-        clearAuth();
-      }
-    }
-
-    setLoading(false);
-  }, []);
+    setAuthToken(token);
+  }, [token]);
 
   const login = useCallback(async (phoneNumber: string, password: string) => {
     const data = await loginApi({ phoneNumber, password });
-    persistAuth(data);
-    setTokenState(data.token);
-    setAuthToken(data.token);
+    saveSession(data);
+    setToken(data.token);
     setUser({
       userId: data.userId,
       fullName: data.fullName,
@@ -93,9 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (fullName: string, phoneNumber: string, password: string) => {
       const data = await registerApi({ fullName, phoneNumber, password });
-      persistAuth(data);
-      setTokenState(data.token);
-      setAuthToken(data.token);
+      saveSession(data);
+      setToken(data.token);
       setUser({
         userId: data.userId,
         fullName: data.fullName,
@@ -105,9 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    clearAuth();
-    setAuthToken(null);
-    setTokenState(null);
+    clearSession();
+    setToken(null);
     setUser(null);
   }, []);
 

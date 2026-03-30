@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/AuthContext";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function LoginPage() {
   const { login, user, loading } = useAuth();
@@ -29,8 +30,7 @@ export default function LoginPage() {
       toast.success("Login successful");
       router.replace("/dashboard");
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Login failed";
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error, "Login failed"));
     } finally {
       setSubmitting(false);
     }
@@ -41,16 +41,16 @@ export default function LoginPage() {
       <section className="auth-card">
         <div className="brand-badge">WingView</div>
         <h1>Login</h1>
-        <p className="muted">Sign in with your phone number and password.</p>
+        <p className="muted">Use your phone number to sign in.</p>
 
         <form className="form-stack" onSubmit={handleSubmit}>
           <label className="field">
             <span>Phone number</span>
             <input
               type="text"
+              placeholder="012345678"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="012345678"
               required
             />
           </label>
@@ -59,14 +59,14 @@ export default function LoginPage() {
             <span>Password</span>
             <input
               type="password"
+              placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
               required
             />
           </label>
 
-          <button type="submit" className="primary-btn" disabled={submitting}>
+          <button className="primary-btn" type="submit" disabled={submitting}>
             {submitting ? "Signing in..." : "Sign in"}
           </button>
         </form>

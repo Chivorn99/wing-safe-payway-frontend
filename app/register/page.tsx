@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/AuthContext";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function RegisterPage() {
   const { register, user, loading } = useAuth();
@@ -29,9 +30,8 @@ export default function RegisterPage() {
       await register(fullName, phoneNumber, password);
       toast.success("Registration successful");
       router.replace("/dashboard");
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Registration failed";
-      toast.error(errorMessage);
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Registration failed"));
     } finally {
       setSubmitting(false);
     }
@@ -42,16 +42,16 @@ export default function RegisterPage() {
       <section className="auth-card">
         <div className="brand-badge">WingView</div>
         <h1>Create account</h1>
-        <p className="muted">Register as a normal user.</p>
+        <p className="muted">Register with full name, phone number, and password.</p>
 
         <form className="form-stack" onSubmit={handleSubmit}>
           <label className="field">
             <span>Full name</span>
             <input
               type="text"
+              placeholder="Your full name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Your full name"
               required
             />
           </label>
@@ -60,9 +60,9 @@ export default function RegisterPage() {
             <span>Phone number</span>
             <input
               type="text"
+              placeholder="012345678"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="012345678"
               required
             />
           </label>
@@ -71,20 +71,20 @@ export default function RegisterPage() {
             <span>Password</span>
             <input
               type="password"
+              placeholder="Create password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create password"
               required
             />
           </label>
 
-          <button type="submit" className="primary-btn" disabled={submitting}>
+          <button className="primary-btn" type="submit" disabled={submitting}>
             {submitting ? "Creating..." : "Create account"}
           </button>
         </form>
 
         <p className="auth-footer">
-          Already registered? <Link href="/login">Login</Link>
+          Already have an account? <Link href="/login">Login</Link>
         </p>
       </section>
     </main>
