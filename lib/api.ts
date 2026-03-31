@@ -35,7 +35,7 @@ export type TransactionDTO = {
     | "ENTERTAINMENT"
     | "TRANSFER"
     | "OTHER";
-  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  riskLevel: "SAFE" | "WARNING" | "HIGH_RISK";
   paymentContext: "MERCHANT" | "WINGSHOP" | "P2P" | "BILLPAY";
   status: "VERIFIED" | "PAID" | "BLOCKED";
   note?: string;

@@ -15,7 +15,7 @@ const blank: TransactionDTO = {
   amount: 0,
   currency: "USD",
   category: "OTHER",
-  riskLevel: "LOW",
+  riskLevel: "SAFE",
   paymentContext: "MERCHANT",
   status: "PAID",
   note: "",
@@ -87,7 +87,7 @@ export default function ScanPage() {
         amount: Number(data.amount) || 0,
         currency: data.currency || "USD",
         category: data.category || "OTHER",
-        riskLevel: data.riskLevel || "LOW",
+        riskLevel: data.riskLevel || "SAFE",
         paymentContext: data.paymentContext || "MERCHANT",
         status: data.status || "PAID",
         note: data.note || "",
@@ -115,14 +115,18 @@ export default function ScanPage() {
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
 
-    canvas.toBlob(async (blob) => {
-      if (!blob) return toast.error("Capture failed");
-      const file = new File([blob], `receipt-${Date.now()}.jpg`, {
-        type: "image/jpeg",
-      });
-      stopCamera();
-      await runOcr(file);
-    }, "image/jpeg", 0.92);
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob) return toast.error("Capture failed");
+        const file = new File([blob], `receipt-${Date.now()}.jpg`, {
+          type: "image/jpeg",
+        });
+        stopCamera();
+        await runOcr(file);
+      },
+      "image/jpeg",
+      0.92,
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +137,15 @@ export default function ScanPage() {
       toast.success("Transaction saved");
       router.push("/dashboard");
     } catch (err: unknown) {
-      const message = err instanceof Object && "response" in err && err.response instanceof Object && "data" in err.response && err.response.data instanceof Object && "message" in err.response.data ? String(err.response.data.message) : "Failed to save";
+      const message =
+        err instanceof Object &&
+        "response" in err &&
+        err.response instanceof Object &&
+        "data" in err.response &&
+        err.response.data instanceof Object &&
+        "message" in err.response.data
+          ? String(err.response.data.message)
+          : "Failed to save";
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -146,7 +158,10 @@ export default function ScanPage() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <button className="back-link-btn" onClick={() => router.push("/dashboard")}>
+          <button
+            className="back-link-btn"
+            onClick={() => router.push("/dashboard")}
+          >
             ← Back
           </button>
           <h1>Add transaction</h1>
@@ -167,7 +182,11 @@ export default function ScanPage() {
               }
             }}
           >
-            {m === "manual" ? "✏️ Manual" : m === "upload" ? "📎 Upload" : "📷 Camera"}
+            {m === "manual"
+              ? "✏️ Manual"
+              : m === "upload"
+                ? "📎 Upload"
+                : "📷 Camera"}
           </button>
         ))}
       </section>
@@ -208,7 +227,11 @@ export default function ScanPage() {
                 </button>
               ) : (
                 <>
-                  <video ref={videoRef} className="camera-preview" playsInline />
+                  <video
+                    ref={videoRef}
+                    className="camera-preview"
+                    playsInline
+                  />
                   <div className="camera-actions">
                     <button className="primary-btn" onClick={capturePhoto}>
                       Capture
@@ -236,9 +259,7 @@ export default function ScanPage() {
           {mode === "manual" && (
             <div className="capture-panel">
               <h2>Manual entry</h2>
-              <p className="muted">
-                Fill in the transaction details below.
-              </p>
+              <p className="muted">Fill in the transaction details below.</p>
             </div>
           )}
         </article>
@@ -317,9 +338,21 @@ export default function ScanPage() {
                     }))
                   }
                 >
-                  {["FOOD","SHOPPING","TRANSPORT","UTILITIES","HEALTH","EDUCATION","ENTERTAINMENT","TRANSFER","OTHER"].map(
-                    (c) => <option key={c} value={c}>{c}</option>
-                  )}
+                  {[
+                    "FOOD",
+                    "SHOPPING",
+                    "TRANSPORT",
+                    "UTILITIES",
+                    "HEALTH",
+                    "EDUCATION",
+                    "ENTERTAINMENT",
+                    "TRANSFER",
+                    "OTHER",
+                  ].map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="field">
@@ -329,12 +362,15 @@ export default function ScanPage() {
                   onChange={(e) =>
                     setForm((p) => ({
                       ...p,
-                      paymentContext: e.target.value as TransactionDTO["paymentContext"],
+                      paymentContext: e.target
+                        .value as TransactionDTO["paymentContext"],
                     }))
                   }
                 >
-                  {["MERCHANT","WINGSHOP","P2P","BILLPAY"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {["MERCHANT", "WINGSHOP", "P2P", "BILLPAY"].map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -352,8 +388,10 @@ export default function ScanPage() {
                     }))
                   }
                 >
-                  {["PAID","VERIFIED","BLOCKED"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {["PAID", "VERIFIED", "BLOCKED"].map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -368,8 +406,10 @@ export default function ScanPage() {
                     }))
                   }
                 >
-                  {["LOW","MEDIUM","HIGH"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {["SAFE", "WARNING", "HIGH_RISK"].map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </label>
