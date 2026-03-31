@@ -53,10 +53,6 @@ export type Transaction = {
   status: string;
   note?: string;
   createdAt: string;
-  merchant?: {
-    merchantId: string;
-    merchantName: string;
-  } | null;
 };
 
 const API_BASE_URL =
@@ -64,9 +60,18 @@ const API_BASE_URL =
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
+});
+
+// Attach token from localStorage on every request
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("wingview_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
 });
 
 export function setAuthToken(token: string | null) {
@@ -102,16 +107,4 @@ export async function getSummary() {
     "/api/transactions/summary"
   );
   return response.data;
-}
-
-export function getApiErrorMessage(error: unknown, fallback: string) {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
-    return error.response?.data?.message || fallback;
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
 }
