@@ -63,6 +63,36 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+export function getApiErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong"
+) {
+  if (axios.isAxiosError(error)) {
+    const responseData = error.response?.data;
+
+    if (
+      responseData &&
+      typeof responseData === "object" &&
+      "message" in responseData
+    ) {
+      const message = (responseData as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim().length > 0) {
+        return message;
+      }
+    }
+
+    if (typeof error.message === "string" && error.message.trim().length > 0) {
+      return error.message;
+    }
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 // Attach token from localStorage on every request
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {

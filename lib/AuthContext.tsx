@@ -54,36 +54,37 @@ function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
-function getInitialToken() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function getInitialUser() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const storedUser = localStorage.getItem(USER_KEY);
-  if (!storedUser) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(storedUser) as UserSession;
-  } catch {
-    clearSession();
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserSession | null>(() => getInitialUser());
-  const [token, setToken] = useState<string | null>(() => getInitialToken());
-  const loading = false;
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+    const storedUser = localStorage.getItem(USER_KEY);
+
+    setToken(storedToken);
+
+    if (!storedUser) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setUser(JSON.parse(storedUser) as UserSession);
+    } catch {
+      clearSession();
+      setToken(null);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setAuthToken(token);
