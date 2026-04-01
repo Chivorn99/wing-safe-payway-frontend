@@ -93,6 +93,30 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      <section className="quick-actions">
+        <Link href="/scan?mode=manual" className="action-card">
+          <div className="icon">✏️</div>
+          <div>
+            <strong>Manual</strong>
+            <span>Enter transaction</span>
+          </div>
+        </Link>
+        <Link href="/scan?mode=upload" className="action-card">
+          <div className="icon">📎</div>
+          <div>
+            <strong>Upload receipt</strong>
+            <span>OCR auto-fill</span>
+          </div>
+        </Link>
+        <Link href="/scan?mode=camera" className="action-card">
+          <div className="icon">📷</div>
+          <div>
+            <strong>Camera</strong>
+            <span>Capture receipt</span>
+          </div>
+        </Link>
+      </section>
+
       {fetching ? (
         <section className="panel">
           <p className="muted">Loading dashboard...</p>
@@ -115,6 +139,12 @@ export default function DashboardPage() {
               <strong>{summary?.blockedTransactions || 0}</strong>
             </article>
           </section>
+
+          <div style={{ marginBottom: "16px" }}>
+            <Link href="/transactions" className="ghost-btn">
+              View all transactions →
+            </Link>
+          </div>
 
           <section className="dashboard-grid">
             <article className="panel">
@@ -157,8 +187,13 @@ export default function DashboardPage() {
                     <div className="tx-item" key={tx.id}>
                       <div>
                         <strong>{tx.recipientName}</strong>
-                        <p className="muted">
-                          {tx.category} · {tx.bankName} · {tx.status}
+                        <p>
+                          {tx.category} · {tx.bankName}{" "}
+                          <span
+                            className={`badge badge-${tx.status.toLowerCase()}`}
+                          >
+                            {tx.status}
+                          </span>
                         </p>
                       </div>
                       <span>
