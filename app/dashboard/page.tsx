@@ -87,6 +87,7 @@ export default function DashboardPage() {
         </div>
         <div className="topbar-actions">
           <Link href="/scan" className="primary-btn">Add transaction</Link>
+          <Link href="/profile" className="ghost-btn">Profile</Link>
           <Link href="/transactions" className="ghost-btn">History</Link>
           <button className="ghost-btn" onClick={() => { logout(); router.replace("/login"); }}>
             Logout
