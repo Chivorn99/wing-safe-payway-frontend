@@ -22,6 +22,13 @@ export default function LoginPage() {
     }
   }, [loading, user, router]);
 
+  useEffect(() => {
+    if (sessionStorage.getItem("wingview_auth_expired") === "1") {
+      sessionStorage.removeItem("wingview_auth_expired");
+      toast.error("Your session expired. Please sign in again.");
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);

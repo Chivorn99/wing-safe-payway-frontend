@@ -63,6 +63,11 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+const TOKEN_KEY = "wingview_token";
+const USER_KEY = "wingview_user";
+
+let authRedirectInProgress = false;
+
 export function getApiErrorMessage(
   error: unknown,
   fallback = "Something went wrong"
@@ -103,6 +108,33 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const requestUrl = String(error?.config?.url || "");
+    const isAuthEndpoint =
+      requestUrl.includes("/api/auth/login") ||
+      requestUrl.includes("/api/auth/register");
+
+    if (
+      typeof window !== "undefined" &&
+      !authRedirectInProgress &&
+      !isAuthEndpoint &&
+      (status === 401 || status === 403)
+    ) {
+      authRedirectInProgress = true;
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      sessionStorage.setItem("wingview_auth_expired", "1");
+      delete api.defaults.headers.common.Authorization;
+      window.location.replace("/login");
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export function setAuthToken(token: string | null) {
   if (token) {
