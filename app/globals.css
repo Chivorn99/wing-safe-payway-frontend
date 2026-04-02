@@ -1652,8 +1652,10 @@ img, video { display: block; max-width: 100%; }
   .dashboard-goals-snapshot { grid-template-columns: 1fr; }
 }
 
+.goals-stats-grid { grid-template-columns: repeat(3, 1fr); }
+
 @media (max-width: 640px) {
-  .app-shell { padding: 16px; padding-bottom: calc(var(--nav-height) + 16px); }
+  .app-shell { padding: 16px; padding-bottom: calc(var(--nav-height) + 32px); }
   .auth-card { padding: 0 8px; }
   .auth-form-side { padding: 24px 16px; }
   .stats-grid { grid-template-columns: 1fr; }
@@ -1686,4 +1688,9 @@ img, video { display: block; max-width: 100%; }
   .goal-card-top { flex-direction: column; align-items: flex-start; }
   .goal-progress-ring { width: 96px; height: 96px; }
   .goal-progress-ring svg { width: 96px; height: 96px; }
+
+  .stat-card { padding: 16px 12px; }
+  .stat-label { font-size: 10px; letter-spacing: 0.08em; }
+  .stat-value { font-size: 22px; }
+  .stat-label-icon { font-size: 14px; }
 }

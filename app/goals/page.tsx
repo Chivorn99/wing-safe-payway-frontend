@@ -137,7 +137,7 @@ export default function GoalsPage() {
         </header>
 
         {/* Stats */}
-        <section className="stats-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <section className="stats-grid goals-stats-grid">
           <article className="stat-card">
             <div className="stat-label">
               <span className="stat-label-icon">🎯</span> Active Goals
