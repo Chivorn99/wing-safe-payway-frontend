@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/AuthContext";
+import NavBar from "@/app/components/NavBar";
 import { api } from "@/lib/api";
 
 type Profile = {
@@ -15,30 +16,6 @@ type Profile = {
   totalTransactions: number;
 };
 
-function NavBar() {
-  const pathname = usePathname();
-  const links = [
-    { href: "/dashboard", icon: "📊", label: "Dashboard" },
-    { href: "/scan", icon: "📸", label: "Add" },
-    { href: "/transactions", icon: "📋", label: "History" },
-    { href: "/profile", icon: "👤", label: "Profile" },
-  ];
-
-  return (
-    <nav className="nav-bar">
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`nav-item${pathname === link.href ? " active" : ""}`}
-        >
-          <span className="nav-item-icon">{link.icon}</span>
-          {link.label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
 
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();

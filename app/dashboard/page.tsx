@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { useAuth } from "@/lib/AuthContext";
+import NavBar from "@/app/components/NavBar";
 import {
   getApiErrorMessage,
   getMyTransactions,
@@ -16,6 +17,12 @@ import {
   type SpendingSummaryResponse,
   type Transaction,
 } from "@/lib/api";
+import {
+  getGoals,
+  getBudgets,
+  type SavingGoal,
+  type CategoryBudget,
+} from "@/lib/localStorage";
 
 const CHART_COLORS = [
   "#10b981", "#8b5cf6", "#f59e0b",
@@ -24,15 +31,8 @@ const CHART_COLORS = [
 ];
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  FOOD: "🍔",
-  SHOPPING: "🛍️",
-  TRANSPORT: "🚗",
-  UTILITIES: "💡",
-  HEALTH: "🏥",
-  EDUCATION: "📚",
-  ENTERTAINMENT: "🎮",
-  TRANSFER: "💸",
-  OTHER: "📌",
+  FOOD: "🍔", SHOPPING: "🛍️", TRANSPORT: "🚗", UTILITIES: "💡",
+  HEALTH: "🏥", EDUCATION: "📚", ENTERTAINMENT: "🎮", TRANSFER: "💸", OTHER: "📌",
 };
 
 function getGreeting(): { text: string; emoji: string } {
@@ -42,32 +42,6 @@ function getGreeting(): { text: string; emoji: string } {
   return { text: "Good evening", emoji: "🌙" };
 }
 
-function NavBar() {
-  const pathname = usePathname();
-
-  const links = [
-    { href: "/dashboard", icon: "📊", label: "Dashboard" },
-    { href: "/scan", icon: "📸", label: "Add" },
-    { href: "/transactions", icon: "📋", label: "History" },
-    { href: "/profile", icon: "👤", label: "Profile" },
-  ];
-
-  return (
-    <nav className="nav-bar">
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`nav-item${pathname === link.href ? " active" : ""}`}
-        >
-          <span className="nav-item-icon">{link.icon}</span>
-          {link.label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -75,6 +49,8 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<SpendingSummaryResponse | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [goals, setGoals] = useState<SavingGoal[]>([]);
+  const [budgetAlerts, setBudgetAlerts] = useState<string[]>([]);
 
   const greeting = useMemo(() => getGreeting(), []);
 
@@ -88,13 +64,46 @@ export default function DashboardPage() {
         const [s, t] = await Promise.all([getSummary(), getMyTransactions()]);
         setSummary(s);
         setTransactions(t);
+
+        // Check budget alerts
+        if (user) {
+          const budgets: CategoryBudget[] = getBudgets(user.userId);
+          const now = new Date();
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+          const thisMonthTx = t.filter((tx) => {
+            if (!tx.createdAt) return false;
+            const d = new Date(tx.createdAt);
+            return d >= monthStart && d <= monthEnd;
+          });
+
+          const alerts: string[] = [];
+          budgets.forEach((b) => {
+            const spent = thisMonthTx
+              .filter((tx) => tx.category === b.category)
+              .reduce((s, tx) => s + Number(tx.amount), 0);
+            const pct = (spent / b.limit) * 100;
+            if (pct >= 80) {
+              const cat = b.category.charAt(0) + b.category.slice(1).toLowerCase();
+              if (pct >= 100) {
+                alerts.push(`${CATEGORY_EMOJI[b.category] || "📌"} ${cat} budget exceeded!`);
+              } else {
+                alerts.push(`${CATEGORY_EMOJI[b.category] || "📌"} ${cat} budget is ${pct.toFixed(0)}% used`);
+              }
+            }
+          });
+          setBudgetAlerts(alerts);
+        }
       } catch (err: unknown) {
         toast.error(getApiErrorMessage(err, "Failed to load dashboard"));
       } finally {
         setFetching(false);
       }
     };
-    if (user) load();
+    if (user) {
+      load();
+      setGoals(getGoals(user.userId));
+    }
   }, [user]);
 
   const pieData = useMemo(() => {
@@ -121,6 +130,7 @@ export default function DashboardPage() {
   }, [transactions]);
 
   const recent = transactions.slice(0, 5);
+  const topGoals = goals.slice(0, 2);
 
   function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -147,6 +157,15 @@ export default function DashboardPage() {
             <p className="muted">Here&apos;s your spending overview</p>
           </div>
         </header>
+
+        {/* Budget alerts */}
+        {budgetAlerts.map((alert, i) => (
+          <div className="budget-alert" key={i}>
+            <span className="budget-alert-emoji">⚠️</span>
+            {alert}
+            <Link href="/insights" style={{ marginLeft: "auto", color: "#92400e", fontWeight: 600, fontSize: 13 }}>View →</Link>
+          </div>
+        ))}
 
         {fetching ? (
           <section className="stats-grid">
@@ -195,11 +214,11 @@ export default function DashboardPage() {
                   <span>Auto-fill from photo</span>
                 </div>
               </Link>
-              <Link href="/scan" className="action-card">
-                <div className="action-icon">✏️</div>
+              <Link href="/insights" className="action-card">
+                <div className="action-icon">💡</div>
                 <div>
-                  <strong>Manual entry</strong>
-                  <span>Add transaction</span>
+                  <strong>View insights</strong>
+                  <span>Smart analytics</span>
                 </div>
               </Link>
               <Link href="/transactions" className="action-card">
@@ -210,6 +229,46 @@ export default function DashboardPage() {
                 </div>
               </Link>
             </section>
+
+            {/* Goals snapshot */}
+            {topGoals.length > 0 && (
+              <article className="panel" style={{ marginBottom: 20 }}>
+                <div className="panel-head">
+                  <h2>🎯 Goals Progress</h2>
+                  <Link href="/goals" className="ghost-btn" style={{ height: 36, fontSize: 13 }}>
+                    All goals →
+                  </Link>
+                </div>
+                <div className="dashboard-goals-snapshot">
+                  {topGoals.map((goal) => {
+                    const pct = Math.min((goal.savedAmount / goal.targetAmount) * 100, 100);
+                    const circumference = 2 * Math.PI * 18;
+                    const offset = circumference - (pct / 100) * circumference;
+                    return (
+                      <div className="goal-snapshot-card" key={goal.id}>
+                        <div className="goal-snapshot-ring">
+                          <svg width="48" height="48" viewBox="0 0 48 48">
+                            <circle cx="24" cy="24" r="18" fill="none" stroke="rgba(16,185,129,0.1)" strokeWidth="4" />
+                            <circle
+                              cx="24" cy="24" r="18" fill="none"
+                              stroke="#10b981" strokeWidth="4" strokeLinecap="round"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={offset}
+                              transform="rotate(-90 24 24)"
+                            />
+                          </svg>
+                          <div className="goal-snapshot-center">{goal.emoji}</div>
+                        </div>
+                        <div className="goal-snapshot-info">
+                          <strong>{goal.name}</strong>
+                          <span>{Math.round(pct)}% • ${goal.savedAmount.toFixed(0)} / ${goal.targetAmount.toFixed(0)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            )}
 
             <section className="dashboard-grid">
               {/* Bar chart */}
@@ -226,9 +285,7 @@ export default function DashboardPage() {
                       <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} />
                       <Tooltip
                         formatter={(val) => {
-                          const amount = Number(
-                            Array.isArray(val) ? val[0] : (val ?? 0)
-                          );
+                          const amount = Number(Array.isArray(val) ? val[0] : (val ?? 0));
                           return [`$${amount.toFixed(2)}`, "Spent"];
                         }}
                         contentStyle={{
@@ -278,9 +335,7 @@ export default function DashboardPage() {
                       </Pie>
                       <Tooltip
                         formatter={(val) => {
-                          const amount = Number(
-                            Array.isArray(val) ? val[0] : (val ?? 0)
-                          );
+                          const amount = Number(Array.isArray(val) ? val[0] : (val ?? 0));
                           return [`$${amount.toFixed(2)}`, "Amount"];
                         }}
                         contentStyle={{
