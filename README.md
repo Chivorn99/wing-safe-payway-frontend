@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WingView — Frontend
 
-## Getting Started
+A modern financial management web app built with Next.js. Track spending, scan receipts, set savings goals, and gain smart insights — all with a mobile-first Gen Z aesthetic.
 
-First, run the development server:
+## Tech Stack
+
+- **Next.js 15** (App Router)
+- **TypeScript**
+- **Vanilla CSS** (glassmorphism, gradients, micro-animations)
+- **Axios** for API communication
+- **React Hot Toast** for notifications
+- **Chart.js** + **react-chartjs-2** for data visualization
+
+## Features
+
+- 🔐 **JWT Authentication** — Register, login, protected routes
+- 📊 **Dashboard** — Real-time spending overview with charts
+- 💳 **Transactions** — Add, search, filter, view history
+- 🎯 **Savings Goals** — Create goals, track progress with ring charts
+- 💡 **Insights & Budgets** — Category breakdown, weekly charts, smart tips
+- 📸 **Receipt OCR** — Scan receipts to auto-fill transactions
+- 👤 **Profile** — Change password, view account info
+- 💰 **Dual Currency** — Full support for USD ($) and KHR (៛)
+- 📱 **Mobile-First** — Responsive design tested on iPhone 14 (390×844)
+
+## Quick Start
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment
+
+Create `.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8081
+```
+
+### 3. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Build for production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Pages
 
-To learn more about Next.js, take a look at the following resources:
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page |
+| `/login` | Sign in |
+| `/register` | Create account |
+| `/dashboard` | Spending overview + charts |
+| `/transactions` | Transaction history + filters |
+| `/goals` | Savings goals with progress rings |
+| `/insights` | Analytics, budgets, category breakdown |
+| `/scan` | Add transaction (manual / receipt upload / camera) |
+| `/profile` | Account settings + change password |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+├── components/      # NavBar, shared UI
+├── dashboard/       # Dashboard page
+├── goals/           # Savings goals page
+├── insights/        # Insights & budgets page
+├── login/           # Login page
+├── register/        # Register page
+├── scan/            # Add transaction page
+├── transactions/    # Transaction list page
+├── profile/         # Profile & settings page
+├── globals.css      # Design system (1600+ lines)
+└── layout.tsx       # Root layout + AuthProvider
 
-## Deploy on Vercel
+lib/
+├── api.ts           # Axios client + all API functions
+├── AuthContext.tsx   # JWT auth context provider
+└── localStorage.ts  # Budget helpers + currency formatting
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Demo Credentials
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Role | Phone | Password |
+|------|-------|----------|
+| User | `0961234567` | `123456` |
+| Admin | `0960000000` | `admin123` |
