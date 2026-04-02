@@ -10,17 +10,36 @@ import {
   PlatformStats,
 } from "@/lib/api";
 
+function decodeJwtRole(token: string): string | null {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded.role || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AdminPage() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!token) {
       router.push("/login");
+      return;
+    }
+
+    const role = decodeJwtRole(token);
+    if (role !== "ADMIN") {
+      setError("Access denied. You must be logged in as an Admin.");
+      setPageLoading(false);
       return;
     }
 
@@ -30,15 +49,15 @@ export default function AdminPage() {
         setUsers(u);
         setStats(s);
       } catch {
-        setError("Access denied. Admin privileges required.");
+        setError("Failed to load admin data. Please try again.");
       } finally {
-        setLoading(false);
+        setPageLoading(false);
       }
     }
     load();
-  }, [token, router]);
+  }, [token, authLoading, router]);
 
-  if (loading) {
+  if (pageLoading) {
     return (
       <div className="app-shell">
         <div className="card" style={{ textAlign: "center", padding: 48 }}>
