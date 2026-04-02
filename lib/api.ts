@@ -122,7 +122,7 @@ api.interceptors.response.use(
       typeof window !== "undefined" &&
       !authRedirectInProgress &&
       !isAuthEndpoint &&
-      (status === 401 || status === 403)
+      status === 401
     ) {
       authRedirectInProgress = true;
       localStorage.removeItem(TOKEN_KEY);
