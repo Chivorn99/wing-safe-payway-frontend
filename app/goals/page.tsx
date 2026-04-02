@@ -6,14 +6,14 @@ import toast from "react-hot-toast";
 import { useAuth } from "@/lib/AuthContext";
 import NavBar from "@/app/components/NavBar";
 import {
-  getGoals,
-  addGoal,
-  deleteGoal,
-  contributeToGoal,
-  formatCurrency,
-  CURRENCIES,
-  type SavingGoal,
-} from "@/lib/localStorage";
+  getMyGoals,
+  createGoal,
+  addGoalProgress,
+  deleteGoalApi,
+  getApiErrorMessage,
+  type SavingGoalResponse,
+} from "@/lib/api";
+import { formatCurrency, CURRENCIES } from "@/lib/localStorage";
 
 const GOAL_EMOJIS = ["🎯", "💰", "🏠", "🚗", "✈️", "📱", "💻", "🎓", "💍", "🏥", "👗", "🎮", "📚", "⚡"];
 
@@ -21,10 +21,12 @@ export default function GoalsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  const [goals, setGoals] = useState<SavingGoal[]>([]);
+  const [goals, setGoals] = useState<SavingGoalResponse[]>([]);
+  const [fetching, setFetching] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [contributeId, setContributeId] = useState<string | null>(null);
+  const [contributeId, setContributeId] = useState<number | null>(null);
   const [contributeAmount, setContributeAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // New goal form
   const [emoji, setEmoji] = useState("🎯");
@@ -37,61 +39,88 @@ export default function GoalsPage() {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
 
-  const refresh = useCallback(() => {
-    if (user) setGoals(getGoals(user.userId));
+  const refresh = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await getMyGoals();
+      setGoals(data);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to load goals"));
+    } finally {
+      setFetching(false);
+    }
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !name || !targetAmount) return;
+    if (!user || !name || !targetAmount || submitting) return;
 
-    addGoal(user.userId, {
-      emoji,
-      name,
-      targetAmount: Number(targetAmount),
-      currency,
-      deadline: deadline || new Date(Date.now() + 90 * 86400000).toISOString(),
-    });
+    setSubmitting(true);
+    try {
+      await createGoal({
+        title: name,
+        targetAmount: Number(targetAmount),
+        currency,
+        emoji,
+        deadline: deadline || undefined,
+      });
 
-    toast.success("Goal created! 🎯");
-    setShowForm(false);
-    setName("");
-    setTargetAmount("");
-    setDeadline("");
-    setEmoji("🎯");
-    refresh();
+      toast.success("Goal created! 🎯");
+      setShowForm(false);
+      setName("");
+      setTargetAmount("");
+      setDeadline("");
+      setEmoji("🎯");
+      refresh();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to create goal"));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleContribute = (goalId: string) => {
-    if (!user || !contributeAmount || Number(contributeAmount) <= 0) return;
-    contributeToGoal(user.userId, goalId, Number(contributeAmount));
-    toast.success("Contribution added! 💰");
-    setContributeId(null);
-    setContributeAmount("");
-    refresh();
+  const handleContribute = async (goalId: number) => {
+    if (!user || !contributeAmount || Number(contributeAmount) <= 0 || submitting) return;
+    setSubmitting(true);
+    try {
+      await addGoalProgress(goalId, { amount: Number(contributeAmount) });
+      toast.success("Contribution added! 💰");
+      setContributeId(null);
+      setContributeAmount("");
+      refresh();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to add contribution"));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDelete = (goalId: string) => {
-    if (!user) return;
-    deleteGoal(user.userId, goalId);
-    toast.success("Goal removed");
-    refresh();
+  const handleDelete = async (goalId: number) => {
+    if (!user || submitting) return;
+    setSubmitting(true);
+    try {
+      await deleteGoalApi(goalId);
+      toast.success("Goal removed");
+      refresh();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete goal"));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const getProgress = (g: SavingGoal) => Math.min((g.savedAmount / g.targetAmount) * 100, 100);
-
-  const getDaysLeft = (deadline: string) => {
+  const getDaysLeft = (deadline: string | null) => {
+    if (!deadline) return null;
     const diff = new Date(deadline).getTime() - Date.now();
     return Math.max(0, Math.ceil(diff / 86400000));
   };
 
   if (loading || !user) return null;
 
-  const totalSaved = goals.reduce((sum, g) => sum + g.savedAmount, 0);
-  const totalTarget = goals.reduce((sum, g) => sum + g.targetAmount, 0);
-  const completedGoals = goals.filter((g) => g.savedAmount >= g.targetAmount).length;
+  const totalSaved = goals.reduce((sum, g) => sum + Number(g.currentAmount), 0);
+  const completedGoals = goals.filter((g) => g.status === "COMPLETED").length;
 
   return (
     <>
@@ -113,7 +142,7 @@ export default function GoalsPage() {
             <div className="stat-label">
               <span className="stat-label-icon">🎯</span> Active Goals
             </div>
-            <div className="stat-value">{goals.length}</div>
+            <div className="stat-value">{goals.filter(g => g.status === "ACTIVE").length}</div>
           </article>
           <article className="stat-card">
             <div className="stat-label">
@@ -175,13 +204,20 @@ export default function GoalsPage() {
                 <span>Deadline</span>
                 <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
               </label>
-              <button className="primary-btn" type="submit">🎯 Create goal</button>
+              <button className="primary-btn" type="submit" disabled={submitting}>
+                {submitting ? "Creating..." : "🎯 Create goal"}
+              </button>
             </form>
           </section>
         )}
 
         {/* Goals list */}
-        {goals.length === 0 ? (
+        {fetching ? (
+          <section className="stats-grid">
+            <div className="skeleton skeleton-stat" />
+            <div className="skeleton skeleton-stat" />
+          </section>
+        ) : goals.length === 0 ? (
           <section className="panel">
             <div className="empty-state">
               <div className="empty-state-emoji">🎯</div>
@@ -192,9 +228,9 @@ export default function GoalsPage() {
         ) : (
           <section className="goals-grid">
             {goals.map((goal) => {
-              const progress = getProgress(goal);
+              const progress = Math.min(Number(goal.progressPercent), 100);
               const days = getDaysLeft(goal.deadline);
-              const completed = progress >= 100;
+              const completed = goal.status === "COMPLETED";
               const circumference = 2 * Math.PI * 54;
               const offset = circumference - (progress / 100) * circumference;
 
@@ -222,12 +258,12 @@ export default function GoalsPage() {
                       </div>
                     </div>
                     <div className="goal-card-info">
-                      <h3>{goal.name}</h3>
+                      <h3>{goal.title}</h3>
                       <p className="goal-amount">
-                        <strong>{formatCurrency(goal.savedAmount, goal.currency)}</strong>
-                        <span className="muted"> / {formatCurrency(goal.targetAmount, goal.currency)}</span>
+                        <strong>{formatCurrency(Number(goal.currentAmount), goal.currency)}</strong>
+                        <span className="muted"> / {formatCurrency(Number(goal.targetAmount), goal.currency)}</span>
                       </p>
-                      {!completed && (
+                      {!completed && days !== null && (
                         <p className="muted" style={{ fontSize: 13 }}>
                           {days > 0 ? `${days} days left` : "Deadline passed"}
                         </p>
@@ -250,8 +286,8 @@ export default function GoalsPage() {
                               style={{ flex: 1, height: 38 }}
                               autoFocus
                             />
-                            <button className="primary-btn" style={{ height: 38, fontSize: 13 }} onClick={() => handleContribute(goal.id)}>
-                              Add
+                            <button className="primary-btn" style={{ height: 38, fontSize: 13 }} onClick={() => handleContribute(goal.id)} disabled={submitting}>
+                              {submitting ? "..." : "Add"}
                             </button>
                             <button className="ghost-btn" style={{ height: 38, fontSize: 13 }} onClick={() => { setContributeId(null); setContributeAmount(""); }}>
                               ✕
@@ -264,7 +300,7 @@ export default function GoalsPage() {
                         )}
                       </>
                     )}
-                    <button className="ghost-btn" style={{ height: 38, fontSize: 13, color: "#ef4444", borderColor: "#fecaca" }} onClick={() => handleDelete(goal.id)}>
+                    <button className="ghost-btn" style={{ height: 38, fontSize: 13, color: "#ef4444", borderColor: "#fecaca" }} onClick={() => handleDelete(goal.id)} disabled={submitting}>
                       Delete
                     </button>
                   </div>

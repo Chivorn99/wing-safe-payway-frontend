@@ -138,3 +138,52 @@ export async function getSummary() {
   );
   return response.data;
 }
+
+// ── Saving Goals API ────────────────────────────────────────────────────────
+
+export type SavingGoalResponse = {
+  id: number;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  progressPercent: number;
+  deadline: string | null;
+  status: "ACTIVE" | "COMPLETED" | "CANCELLED";
+  currency: string;
+  emoji: string;
+  createdAt: string;
+};
+
+export type SavingGoalRequest = {
+  title: string;
+  targetAmount: number;
+  deadline?: string;
+  currency?: string;
+  emoji?: string;
+};
+
+export type GoalProgressRequest = {
+  amount: number;
+};
+
+export async function getMyGoals() {
+  const response = await api.get<SavingGoalResponse[]>("/api/goals/me");
+  return response.data;
+}
+
+export async function createGoal(data: SavingGoalRequest) {
+  const response = await api.post<SavingGoalResponse>("/api/goals", data);
+  return response.data;
+}
+
+export async function addGoalProgress(goalId: number, data: GoalProgressRequest) {
+  const response = await api.patch<SavingGoalResponse>(
+    `/api/goals/${goalId}/progress`,
+    data
+  );
+  return response.data;
+}
+
+export async function deleteGoalApi(goalId: number) {
+  await api.delete(`/api/goals/${goalId}`);
+}

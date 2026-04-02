@@ -14,13 +14,14 @@ import {
   getApiErrorMessage,
   getMyTransactions,
   getSummary,
+  getMyGoals,
   type SpendingSummaryResponse,
   type Transaction,
+  type SavingGoalResponse,
 } from "@/lib/api";
 import {
-  getGoals,
   getBudgets,
-  type SavingGoal,
+  formatCurrency,
   type CategoryBudget,
 } from "@/lib/localStorage";
 
@@ -49,7 +50,7 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<SpendingSummaryResponse | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fetching, setFetching] = useState(true);
-  const [goals, setGoals] = useState<SavingGoal[]>([]);
+  const [goals, setGoals] = useState<SavingGoalResponse[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<string[]>([]);
 
   const greeting = useMemo(() => getGreeting(), []);
@@ -61,9 +62,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [s, t] = await Promise.all([getSummary(), getMyTransactions()]);
+        const [s, t, g] = await Promise.all([getSummary(), getMyTransactions(), getMyGoals()]);
         setSummary(s);
         setTransactions(t);
+        setGoals(g);
 
         // Check budget alerts
         if (user) {
@@ -102,7 +104,6 @@ export default function DashboardPage() {
     };
     if (user) {
       load();
-      setGoals(getGoals(user.userId));
     }
   }, [user]);
 
@@ -241,7 +242,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="dashboard-goals-snapshot">
                   {topGoals.map((goal) => {
-                    const pct = Math.min((goal.savedAmount / goal.targetAmount) * 100, 100);
+                    const pct = Math.min(Number(goal.progressPercent), 100);
                     const circumference = 2 * Math.PI * 18;
                     const offset = circumference - (pct / 100) * circumference;
                     return (
@@ -260,8 +261,8 @@ export default function DashboardPage() {
                           <div className="goal-snapshot-center">{goal.emoji}</div>
                         </div>
                         <div className="goal-snapshot-info">
-                          <strong>{goal.name}</strong>
-                          <span>{Math.round(pct)}% • ${goal.savedAmount.toFixed(0)} / ${goal.targetAmount.toFixed(0)}</span>
+                          <strong>{goal.title}</strong>
+                          <span>{Math.round(pct)}% • {formatCurrency(Number(goal.currentAmount), goal.currency)} / {formatCurrency(Number(goal.targetAmount), goal.currency)}</span>
                         </div>
                       </div>
                     );
