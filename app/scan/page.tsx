@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/AuthContext";
 import { api, createTransaction, type TransactionDTO } from "@/lib/api";
@@ -20,6 +21,37 @@ const blank: TransactionDTO = {
   status: "PAID",
   note: "",
 };
+
+const MODE_CONFIG: Record<Mode, { icon: string; label: string }> = {
+  manual: { icon: "✏️", label: "Manual" },
+  upload: { icon: "📎", label: "Upload" },
+  camera: { icon: "📷", label: "Camera" },
+};
+
+function NavBar() {
+  const pathname = usePathname();
+  const links = [
+    { href: "/dashboard", icon: "📊", label: "Dashboard" },
+    { href: "/scan", icon: "📸", label: "Add" },
+    { href: "/transactions", icon: "📋", label: "History" },
+    { href: "/profile", icon: "👤", label: "Profile" },
+  ];
+
+  return (
+    <nav className="nav-bar">
+      {links.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className={`nav-item${pathname === link.href ? " active" : ""}`}
+        >
+          <span className="nav-item-icon">{link.icon}</span>
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export default function ScanPage() {
   const { user, loading } = useAuth();
@@ -93,7 +125,7 @@ export default function ScanPage() {
         note: data.note || "",
       });
 
-      toast.success("Receipt scanned — review and correct before saving");
+      toast.success("Receipt scanned! ✨ Review and correct before saving");
     } catch {
       toast.error("OCR failed. Fill in fields manually.");
     } finally {
@@ -134,7 +166,7 @@ export default function ScanPage() {
     setSubmitting(true);
     try {
       await createTransaction(form);
-      toast.success("Transaction saved");
+      toast.success("Transaction saved! 🎉");
       router.push("/dashboard");
     } catch (err: unknown) {
       const message =
@@ -155,299 +187,299 @@ export default function ScanPage() {
   if (loading || !user) return null;
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <button
-            className="back-link-btn"
-            onClick={() => router.push("/dashboard")}
-          >
-            ← Back
-          </button>
-          <h1>Add transaction</h1>
-          <p className="muted">Manual entry, upload receipt, or use camera.</p>
-        </div>
-      </header>
+    <>
+      <NavBar />
+      <main className="app-shell">
+        <header className="topbar">
+          <div>
+            <button
+              className="back-link-btn"
+              onClick={() => router.push("/dashboard")}
+            >
+              ← Back
+            </button>
+            <h1>📸 Add transaction</h1>
+            <p className="muted">Manual entry, upload receipt, or use camera.</p>
+          </div>
+        </header>
 
-      <section className="mode-switch">
-        {(["manual", "upload", "camera"] as Mode[]).map((m) => (
-          <button
-            key={m}
-            className={`mode-btn${mode === m ? " active" : ""}`}
-            onClick={() => {
-              setMode(m);
-              if (m === "manual") {
-                setForm({ ...blank });
-                setPreviewUrl("");
-              }
-            }}
-          >
-            {m === "manual"
-              ? "✏️ Manual"
-              : m === "upload"
-                ? "📎 Upload"
-                : "📷 Camera"}
-          </button>
-        ))}
-      </section>
-
-      <section className="scan-layout">
-        <article className="panel">
-          {mode === "upload" && (
-            <div className="capture-panel">
-              <h2>Upload receipt image</h2>
-              <label className="upload-dropzone">
-                <span>Choose file or drag here</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={onFileChange}
-                  hidden
-                />
-              </label>
-              {scanning && <p className="muted">Scanning receipt...</p>}
-              {previewUrl && (
-                <Image
-                  src={previewUrl}
-                  alt="Receipt preview"
-                  className="receipt-preview"
-                  width={500}
-                  height={500}
-                />
-              )}
-            </div>
-          )}
-
-          {mode === "camera" && (
-            <div className="capture-panel">
-              <h2>Camera capture</h2>
-              {!cameraOn ? (
-                <button className="primary-btn" onClick={startCamera}>
-                  Open camera
-                </button>
-              ) : (
-                <>
-                  <video
-                    ref={videoRef}
-                    className="camera-preview"
-                    playsInline
-                  />
-                  <div className="camera-actions">
-                    <button className="primary-btn" onClick={capturePhoto}>
-                      Capture
-                    </button>
-                    <button className="ghost-btn" onClick={stopCamera}>
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              )}
-              {scanning && <p className="muted">Scanning receipt...</p>}
-              {previewUrl && (
-                <Image
-                  src={previewUrl}
-                  alt="Captured receipt"
-                  className="receipt-preview"
-                  width={500}
-                  height={500}
-                />
-              )}
-              <canvas ref={canvasRef} hidden />
-            </div>
-          )}
-
-          {mode === "manual" && (
-            <div className="capture-panel">
-              <h2>Manual entry</h2>
-              <p className="muted">Fill in the transaction details below.</p>
-            </div>
-          )}
-        </article>
-
-        <article className="panel form-panel">
-          <h2>
-            {mode === "manual"
-              ? "Transaction details"
-              : "Review and correct OCR result"}
-          </h2>
-
-          <form className="form-stack" onSubmit={handleSubmit}>
-            <div className="field-row">
-              <label className="field">
-                <span>Recipient name</span>
-                <input
-                  type="text"
-                  value={form.recipientName}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, recipientName: e.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label className="field">
-                <span>Bank name</span>
-                <input
-                  type="text"
-                  value={form.bankName}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, bankName: e.target.value }))
-                  }
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="field-row">
-              <label className="field">
-                <span>Amount</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.amount}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, amount: Number(e.target.value) }))
-                  }
-                  required
-                />
-              </label>
-              <label className="field">
-                <span>Currency</span>
-                <input
-                  type="text"
-                  value={form.currency}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      currency: e.target.value.toUpperCase(),
-                    }))
-                  }
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="field-row">
-              <label className="field">
-                <span>Category</span>
-                <select
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      category: e.target.value as TransactionDTO["category"],
-                    }))
-                  }
-                >
-                  {[
-                    "FOOD",
-                    "SHOPPING",
-                    "TRANSPORT",
-                    "UTILITIES",
-                    "HEALTH",
-                    "EDUCATION",
-                    "ENTERTAINMENT",
-                    "TRANSFER",
-                    "OTHER",
-                  ].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Payment context</span>
-                <select
-                  value={form.paymentContext}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      paymentContext: e.target
-                        .value as TransactionDTO["paymentContext"],
-                    }))
-                  }
-                >
-                  {["MERCHANT", "WINGSHOP", "P2P", "BILLPAY"].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="field-row">
-              <label className="field">
-                <span>Status</span>
-                <select
-                  value={form.status}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      status: e.target.value as TransactionDTO["status"],
-                    }))
-                  }
-                >
-                  {["PAID", "VERIFIED", "BLOCKED"].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Risk level</span>
-                <select
-                  value={form.riskLevel}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      riskLevel: e.target.value as TransactionDTO["riskLevel"],
-                    }))
-                  }
-                >
-                  {["SAFE", "WARNING", "HIGH_RISK"].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Note</span>
-              <textarea
-                rows={3}
-                value={form.note}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, note: e.target.value }))
-                }
-              />
-            </label>
-
-            <div className="form-actions">
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => {
+        <section className="mode-switch">
+          {(["manual", "upload", "camera"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              className={`mode-btn${mode === m ? " active" : ""}`}
+              onClick={() => {
+                setMode(m);
+                if (m === "manual") {
                   setForm({ ...blank });
                   setPreviewUrl("");
-                }}
-              >
-                Reset
-              </button>
-              <button
-                className="primary-btn"
-                type="submit"
-                disabled={submitting || scanning}
-              >
-                {submitting ? "Saving..." : "Save transaction"}
-              </button>
-            </div>
-          </form>
-        </article>
-      </section>
-    </main>
+                }
+              }}
+            >
+              {MODE_CONFIG[m].icon} {MODE_CONFIG[m].label}
+            </button>
+          ))}
+        </section>
+
+        <section className="scan-layout">
+          <article className="panel">
+            {mode === "upload" && (
+              <div className="capture-panel">
+                <h2>Upload receipt image</h2>
+                <label className="upload-dropzone">
+                  <div className="upload-dropzone-icon">📤</div>
+                  <span>Choose file or drag here</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onFileChange}
+                    hidden
+                  />
+                </label>
+                {scanning && <p className="muted">🔍 Scanning receipt...</p>}
+                {previewUrl && (
+                  <Image
+                    src={previewUrl}
+                    alt="Receipt preview"
+                    className="receipt-preview"
+                    width={500}
+                    height={500}
+                  />
+                )}
+              </div>
+            )}
+
+            {mode === "camera" && (
+              <div className="capture-panel">
+                <h2>Camera capture</h2>
+                {!cameraOn ? (
+                  <button className="primary-btn" onClick={startCamera}>
+                    📷 Open camera
+                  </button>
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      className="camera-preview"
+                      playsInline
+                    />
+                    <div className="camera-actions">
+                      <button className="primary-btn" onClick={capturePhoto}>
+                        📸 Capture
+                      </button>
+                      <button className="ghost-btn" onClick={stopCamera}>
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
+                {scanning && <p className="muted">🔍 Scanning receipt...</p>}
+                {previewUrl && (
+                  <Image
+                    src={previewUrl}
+                    alt="Captured receipt"
+                    className="receipt-preview"
+                    width={500}
+                    height={500}
+                  />
+                )}
+                <canvas ref={canvasRef} hidden />
+              </div>
+            )}
+
+            {mode === "manual" && (
+              <div className="capture-panel">
+                <h2>✏️ Manual entry</h2>
+                <p className="muted">Fill in the transaction details in the form.</p>
+              </div>
+            )}
+          </article>
+
+          <article className="panel form-panel">
+            <h2>
+              {mode === "manual"
+                ? "Transaction details"
+                : "Review & correct OCR result"}
+            </h2>
+
+            <form className="form-stack" onSubmit={handleSubmit}>
+              <div className="field-row">
+                <label className="field">
+                  <span>Recipient name</span>
+                  <input
+                    type="text"
+                    value={form.recipientName}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, recipientName: e.target.value }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Bank name</span>
+                  <input
+                    type="text"
+                    value={form.bankName}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, bankName: e.target.value }))
+                    }
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="field-row">
+                <label className="field">
+                  <span>Amount</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.amount}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, amount: Number(e.target.value) }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Currency</span>
+                  <input
+                    type="text"
+                    value={form.currency}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        currency: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="field-row">
+                <label className="field">
+                  <span>Category</span>
+                  <select
+                    value={form.category}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        category: e.target.value as TransactionDTO["category"],
+                      }))
+                    }
+                  >
+                    {[
+                      "FOOD",
+                      "SHOPPING",
+                      "TRANSPORT",
+                      "UTILITIES",
+                      "HEALTH",
+                      "EDUCATION",
+                      "ENTERTAINMENT",
+                      "TRANSFER",
+                      "OTHER",
+                    ].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Payment context</span>
+                  <select
+                    value={form.paymentContext}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        paymentContext: e.target
+                          .value as TransactionDTO["paymentContext"],
+                      }))
+                    }
+                  >
+                    {["MERCHANT", "WINGSHOP", "P2P", "BILLPAY"].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="field-row">
+                <label className="field">
+                  <span>Status</span>
+                  <select
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        status: e.target.value as TransactionDTO["status"],
+                      }))
+                    }
+                  >
+                    {["PAID", "VERIFIED", "BLOCKED"].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Risk level</span>
+                  <select
+                    value={form.riskLevel}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        riskLevel: e.target.value as TransactionDTO["riskLevel"],
+                      }))
+                    }
+                  >
+                    {["SAFE", "WARNING", "HIGH_RISK"].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="field">
+                <span>Note</span>
+                <textarea
+                  rows={3}
+                  value={form.note}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, note: e.target.value }))
+                  }
+                />
+              </label>
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => {
+                    setForm({ ...blank });
+                    setPreviewUrl("");
+                  }}
+                >
+                  Reset
+                </button>
+                <button
+                  className="primary-btn"
+                  type="submit"
+                  disabled={submitting || scanning}
+                >
+                  {submitting ? "Saving..." : "💾 Save transaction"}
+                </button>
+              </div>
+            </form>
+          </article>
+        </section>
+      </main>
+    </>
   );
 }

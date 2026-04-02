@@ -13,6 +13,7 @@ export default function LoginPage() {
 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function LoginPage() {
 
     try {
       await login(phoneNumber, password);
-      toast.success("Login successful");
+      toast.success("Welcome back! 🎉");
       router.replace("/dashboard");
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, "Login failed"));
@@ -38,43 +39,73 @@ export default function LoginPage() {
 
   return (
     <main className="auth-shell">
-      <section className="auth-card">
-        <div className="brand-badge">WingView</div>
-        <h1>Login</h1>
-        <p className="muted">Use your phone number to sign in.</p>
+      <div className="auth-decor">
+        <div className="auth-decor-content">
+          <div className="auth-decor-emoji">💸</div>
+          <h2>Take control of your money</h2>
+          <p>Track spending, scan receipts, and build smarter financial habits.</p>
+        </div>
+      </div>
 
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Phone number</span>
-            <input
-              type="text"
-              placeholder="012345678"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              required
-            />
-          </label>
+      <div className="auth-form-side">
+        <section className="auth-card">
+          <div className="brand-badge">✨ WingView</div>
+          <h1>Welcome back</h1>
+          <p className="muted">Sign in to your account to continue.</p>
 
-          <label className="field">
-            <span>Password</span>
-            <input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
+          <form className="form-stack" onSubmit={handleSubmit}>
+            <label className="field">
+              <span>Phone number</span>
+              <input
+                type="text"
+                placeholder="012345678"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                required
+              />
+            </label>
 
-          <button className="primary-btn" type="submit" disabled={submitting}>
-            {submitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+            <label className="field">
+              <span>Password</span>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPw ? "text" : "password"}
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: 48 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 18,
+                    color: "#9ca3af",
+                    padding: 4,
+                  }}
+                  tabIndex={-1}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                >
+                  {showPw ? "🙈" : "👁️"}
+                </button>
+              </div>
+            </label>
 
-        <p className="auth-footer">
-          No account yet? <Link href="/register">Register</Link>
-        </p>
-      </section>
+            <button className="primary-btn" type="submit" disabled={submitting}>
+              {submitting ? "Signing in..." : "Sign in →"}
+            </button>
+          </form>
+
+          <p className="auth-footer">
+            No account yet? <Link href="/register">Create one</Link>
+          </p>
+        </section>
+      </div>
     </main>
   );
 }

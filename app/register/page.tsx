@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function RegisterPage() {
 
     try {
       await register(fullName, phoneNumber, password);
-      toast.success("Registration successful");
+      toast.success("Welcome to WingView! 🚀");
       router.replace("/dashboard");
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, "Registration failed"));
@@ -39,54 +40,84 @@ export default function RegisterPage() {
 
   return (
     <main className="auth-shell">
-      <section className="auth-card">
-        <div className="brand-badge">WingView</div>
-        <h1>Create account</h1>
-        <p className="muted">Register with full name, phone number, and password.</p>
+      <div className="auth-decor">
+        <div className="auth-decor-content">
+          <div className="auth-decor-emoji">🚀</div>
+          <h2>Start your journey</h2>
+          <p>Join thousands of users building better spending habits every day.</p>
+        </div>
+      </div>
 
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Full name</span>
-            <input
-              type="text"
-              placeholder="Your full name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </label>
+      <div className="auth-form-side">
+        <section className="auth-card">
+          <div className="brand-badge">✨ WingView</div>
+          <h1>Create account</h1>
+          <p className="muted">Set up your account in seconds.</p>
 
-          <label className="field">
-            <span>Phone number</span>
-            <input
-              type="text"
-              placeholder="012345678"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              required
-            />
-          </label>
+          <form className="form-stack" onSubmit={handleSubmit}>
+            <label className="field">
+              <span>Full name</span>
+              <input
+                type="text"
+                placeholder="What should we call you?"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </label>
 
-          <label className="field">
-            <span>Password</span>
-            <input
-              type="password"
-              placeholder="Create password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
+            <label className="field">
+              <span>Phone number</span>
+              <input
+                type="text"
+                placeholder="012345678"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                required
+              />
+            </label>
 
-          <button className="primary-btn" type="submit" disabled={submitting}>
-            {submitting ? "Creating..." : "Create account"}
-          </button>
-        </form>
+            <label className="field">
+              <span>Password</span>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPw ? "text" : "password"}
+                  placeholder="Min 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: 48 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 18,
+                    color: "#9ca3af",
+                    padding: 4,
+                  }}
+                  tabIndex={-1}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                >
+                  {showPw ? "🙈" : "👁️"}
+                </button>
+              </div>
+            </label>
 
-        <p className="auth-footer">
-          Already have an account? <Link href="/login">Login</Link>
-        </p>
-      </section>
+            <button className="primary-btn" type="submit" disabled={submitting}>
+              {submitting ? "Creating..." : "Get started →"}
+            </button>
+          </form>
+
+          <p className="auth-footer">
+            Already have an account? <Link href="/login">Sign in</Link>
+          </p>
+        </section>
+      </div>
     </main>
   );
 }

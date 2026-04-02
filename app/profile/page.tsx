@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/lib/api";
@@ -14,6 +14,31 @@ type Profile = {
   createdAt: string;
   totalTransactions: number;
 };
+
+function NavBar() {
+  const pathname = usePathname();
+  const links = [
+    { href: "/dashboard", icon: "📊", label: "Dashboard" },
+    { href: "/scan", icon: "📸", label: "Add" },
+    { href: "/transactions", icon: "📋", label: "History" },
+    { href: "/profile", icon: "👤", label: "Profile" },
+  ];
+
+  return (
+    <nav className="nav-bar">
+      {links.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className={`nav-item${pathname === link.href ? " active" : ""}`}
+        >
+          <span className="nav-item-icon">{link.icon}</span>
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
@@ -62,7 +87,7 @@ export default function ProfilePage() {
         newPassword,
       });
 
-      toast.success("Password changed — please log in again");
+      toast.success("Password changed! 🔐 Please log in again");
       logout();
       router.replace("/login");
     } catch (err) {
@@ -76,119 +101,122 @@ export default function ProfilePage() {
   if (loading || !user) return null;
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <Link href="/dashboard" className="back-link">
-            ← Dashboard
-          </Link>
-          <h1>Profile & Settings</h1>
-          <p className="muted">Manage your account details</p>
-        </div>
-      </header>
-
-      <section className="profile-layout">
-        {/* Info card */}
-        <article className="panel">
-          <div className="panel-head">
-            <h2>Account info</h2>
+    <>
+      <NavBar />
+      <main className="app-shell">
+        <header className="topbar">
+          <div>
+            <Link href="/dashboard" className="back-link">
+              ← Dashboard
+            </Link>
+            <h1>👤 Profile & Settings</h1>
+            <p className="muted">Manage your account details</p>
           </div>
+        </header>
 
-          <div className="profile-info">
-            <div className="avatar-circle">
-              {user.fullName?.charAt(0).toUpperCase()}
+        <section className="profile-layout">
+          {/* Info card */}
+          <article className="panel">
+            <div className="panel-head">
+              <h2>🪪 Account info</h2>
             </div>
 
-            <div className="info-rows">
-              <div className="info-row">
-                <span>Full name</span>
-                <strong>{profile?.fullName || user.fullName}</strong>
+            <div className="profile-info">
+              <div className="avatar-circle">
+                {user.fullName?.charAt(0).toUpperCase()}
               </div>
-              <div className="info-row">
-                <span>Phone number</span>
-                <strong>{profile?.phoneNumber || "—"}</strong>
-              </div>
-              <div className="info-row">
-                <span>Member since</span>
-                <strong>
-                  {profile?.createdAt
-                    ? new Date(profile.createdAt).toLocaleDateString()
-                    : "—"}
-                </strong>
-              </div>
-              <div className="info-row">
-                <span>Total transactions</span>
-                <strong>{profile?.totalTransactions ?? "—"}</strong>
+
+              <div className="info-rows">
+                <div className="info-row">
+                  <span>Full name</span>
+                  <strong>{profile?.fullName || user.fullName}</strong>
+                </div>
+                <div className="info-row">
+                  <span>Phone number</span>
+                  <strong>{profile?.phoneNumber || "—"}</strong>
+                </div>
+                <div className="info-row">
+                  <span>Member since</span>
+                  <strong>
+                    {profile?.createdAt
+                      ? new Date(profile.createdAt).toLocaleDateString()
+                      : "—"}
+                  </strong>
+                </div>
+                <div className="info-row">
+                  <span>Total transactions</span>
+                  <strong>{profile?.totalTransactions ?? "—"}</strong>
+                </div>
               </div>
             </div>
-          </div>
-        </article>
+          </article>
 
-        {/* Change password */}
-        <article className="panel">
-          <div className="panel-head">
-            <h2>Change password</h2>
-          </div>
+          {/* Change password */}
+          <article className="panel">
+            <div className="panel-head">
+              <h2>🔐 Change password</h2>
+            </div>
 
-          <form className="form-stack" onSubmit={handleChangePassword}>
-            <label className="field">
-              <span>Current password</span>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                required
-              />
-            </label>
+            <form className="form-stack" onSubmit={handleChangePassword}>
+              <label className="field">
+                <span>Current password</span>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  required
+                />
+              </label>
 
-            <label className="field">
-              <span>New password</span>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min 6 characters"
-                required
-              />
-            </label>
+              <label className="field">
+                <span>New password</span>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 6 characters"
+                  required
+                />
+              </label>
 
-            <label className="field">
-              <span>Confirm new password</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat new password"
-                required
-              />
-            </label>
+              <label className="field">
+                <span>Confirm new password</span>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat new password"
+                  required
+                />
+              </label>
 
-            <button className="primary-btn" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Update password"}
+              <button className="primary-btn" type="submit" disabled={saving}>
+                {saving ? "Saving..." : "🔄 Update password"}
+              </button>
+            </form>
+          </article>
+
+          {/* Danger zone */}
+          <article className="panel danger-zone">
+            <div className="panel-head">
+              <h2>🚪 Session</h2>
+            </div>
+            <p className="muted" style={{ marginBottom: 16 }}>
+              Logging out will clear your session from this device.
+            </p>
+            <button
+              className="danger-btn"
+              onClick={() => {
+                logout();
+                router.replace("/login");
+              }}
+            >
+              Log out
             </button>
-          </form>
-        </article>
-
-        {/* Danger zone */}
-        <article className="panel danger-zone">
-          <div className="panel-head">
-            <h2>Session</h2>
-          </div>
-          <p className="muted" style={{ marginBottom: 16 }}>
-            Logging out will clear your session from this device.
-          </p>
-          <button
-            className="danger-btn"
-            onClick={() => {
-              logout();
-              router.replace("/login");
-            }}
-          >
-            Log out
-          </button>
-        </article>
-      </section>
-    </main>
+          </article>
+        </section>
+      </main>
+    </>
   );
 }
