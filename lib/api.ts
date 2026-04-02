@@ -219,3 +219,29 @@ export async function addGoalProgress(goalId: number, data: GoalProgressRequest)
 export async function deleteGoalApi(goalId: number) {
   await api.delete(`/api/goals/${goalId}`);
 }
+
+// ── Admin endpoints (ADMIN role only) ────────────────────────
+
+export type AdminUser = {
+  id: number;
+  phoneNumber: string;
+  fullName: string;
+  role: string;
+  createdAt: string;
+};
+
+export type PlatformStats = {
+  totalUsers: number;
+  totalTransactions: number;
+  totalGoals: number;
+};
+
+export async function getAdminUsers() {
+  const response = await api.get<AdminUser[]>("/api/admin/users");
+  return response.data;
+}
+
+export async function getAdminStats() {
+  const response = await api.get<PlatformStats>("/api/admin/stats");
+  return response.data;
+}
