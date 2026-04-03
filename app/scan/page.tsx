@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/AuthContext";
 import NavBar from "@/app/components/NavBar";
 import { api, createTransaction, type TransactionDTO } from "@/lib/api";
 
-type Mode = "manual" | "upload" | "camera";
+type Mode = "manual" | "upload";
 
 const blank: TransactionDTO = {
   recipientName: "",
@@ -25,7 +25,6 @@ const blank: TransactionDTO = {
 const MODE_CONFIG: Record<Mode, { icon: string; label: string }> = {
   manual: { icon: "✏️", label: "Manual" },
   upload: { icon: "📎", label: "Upload" },
-  camera: { icon: "📷", label: "Camera" },
 };
 
 
@@ -38,42 +37,13 @@ export default function ScanPage() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [scanning, setScanning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [cameraOn, setCameraOn] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
 
-  useEffect(() => {
-    if (mode !== "camera") stopCamera();
-    return () => stopCamera();
-  }, [mode]);
 
-  const stopCamera = () => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setCameraOn(false);
-  };
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setCameraOn(true);
-    } catch {
-      toast.error("Cannot access camera");
-    }
-  };
 
   const runOcr = useCallback(async (file: File) => {
     const preview = URL.createObjectURL(file);
@@ -114,28 +84,7 @@ export default function ScanPage() {
     if (file) await runOcr(file);
   };
 
-  const capturePhoto = async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
-
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) return toast.error("Capture failed");
-        const file = new File([blob], `receipt-${Date.now()}.jpg`, {
-          type: "image/jpeg",
-        });
-        stopCamera();
-        await runOcr(file);
-      },
-      "image/jpeg",
-      0.92,
-    );
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,12 +124,12 @@ export default function ScanPage() {
               ← Back
             </button>
             <h1>📸 Add transaction</h1>
-            <p className="muted">Manual entry, upload receipt, or use camera.</p>
+            <p className="muted">Manual entry or upload a receipt.</p>
           </div>
         </header>
 
         <section className="mode-switch">
-          {(["manual", "upload", "camera"] as Mode[]).map((m) => (
+          {(["manual", "upload"] as Mode[]).map((m) => (
             <button
               key={m}
               className={`mode-btn${mode === m ? " active" : ""}`}
@@ -225,43 +174,7 @@ export default function ScanPage() {
               </div>
             )}
 
-            {mode === "camera" && (
-              <div className="capture-panel">
-                <h2>Camera capture</h2>
-                {!cameraOn ? (
-                  <button className="primary-btn" onClick={startCamera}>
-                    📷 Open camera
-                  </button>
-                ) : (
-                  <>
-                    <video
-                      ref={videoRef}
-                      className="camera-preview"
-                      playsInline
-                    />
-                    <div className="camera-actions">
-                      <button className="primary-btn" onClick={capturePhoto}>
-                        📸 Capture
-                      </button>
-                      <button className="ghost-btn" onClick={stopCamera}>
-                        Cancel
-                      </button>
-                    </div>
-                  </>
-                )}
-                {scanning && <p className="muted">🔍 Scanning receipt...</p>}
-                {previewUrl && (
-                  <Image
-                    src={previewUrl}
-                    alt="Captured receipt"
-                    className="receipt-preview"
-                    width={500}
-                    height={500}
-                  />
-                )}
-                <canvas ref={canvasRef} hidden />
-              </div>
-            )}
+
 
             {mode === "manual" && (
               <div className="capture-panel">

@@ -195,15 +195,7 @@ export default function DashboardPage() {
                   {summary?.totalTransactions || 0}
                 </div>
               </article>
-              <article className="stat-card">
-                <div className="stat-label">
-                  <span className="stat-label-icon">🚫</span>
-                  Blocked
-                </div>
-                <div className="stat-value" style={{ color: "#ef4444" }}>
-                  {summary?.blockedTransactions || 0}
-                </div>
-              </article>
+
             </section>
 
             {/* Quick actions */}
