@@ -6,15 +6,18 @@ import toast from "react-hot-toast";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useAuth } from "@/lib/AuthContext";
 import NavBar from "@/app/components/NavBar";
-import { getMyTransactions, getApiErrorMessage, type Transaction } from "@/lib/api";
+import { getMyTransactions, getApiErrorMessage, api, type Transaction } from "@/lib/api";
 import {
-  getBudgets,
-  setBudget,
-  removeBudget,
   formatCurrency,
   CURRENCIES,
-  type CategoryBudget,
 } from "@/lib/localStorage";
+
+type CategoryBudget = {
+  id?: number;
+  category: string;
+  limit: number;
+  currency: string;
+};
 
 const CATEGORY_EMOJI: Record<string, string> = {
   FOOD: "🍔", SHOPPING: "🛍️", TRANSPORT: "🚗", UTILITIES: "💡",
@@ -69,18 +72,19 @@ export default function InsightsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getMyTransactions();
-        setTransactions(data);
+        const [txData, budgetData] = await Promise.all([
+          getMyTransactions(),
+          api.get<CategoryBudget[]>("/api/budgets"),
+        ]);
+        setTransactions(txData);
+        setBudgetsState(budgetData.data);
       } catch (err: unknown) {
         toast.error(getApiErrorMessage(err, "Failed to load data"));
       } finally {
         setFetching(false);
       }
     };
-    if (user) {
-      load();
-      setBudgetsState(getBudgets(user.userId));
-    }
+    if (user) load();
   }, [user]);
 
   // ── Computed insights ──────────────────────────────────────────────────
@@ -201,20 +205,34 @@ export default function InsightsPage() {
 
   // ── Budget handlers ────────────────────────────────────────────────────
 
-  const handleSetBudget = (e: React.FormEvent) => {
+  const handleSetBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !budgetLimit || Number(budgetLimit) <= 0) return;
-    setBudget(user.userId, budgetCategory, Number(budgetLimit), budgetCurrency);
-    setBudgetsState(getBudgets(user.userId));
-    setBudgetLimit("");
-    toast.success("Budget set! 📊");
+    try {
+      await api.post("/api/budgets", {
+        category: budgetCategory,
+        limit: Number(budgetLimit),
+        currency: budgetCurrency,
+      });
+      const res = await api.get<CategoryBudget[]>("/api/budgets");
+      setBudgetsState(res.data);
+      setBudgetLimit("");
+      toast.success("Budget set! 📊");
+    } catch {
+      toast.error("Failed to save budget");
+    }
   };
 
-  const handleRemoveBudget = (category: string) => {
+  const handleRemoveBudget = async (category: string) => {
     if (!user) return;
-    removeBudget(user.userId, category);
-    setBudgetsState(getBudgets(user.userId));
-    toast.success("Budget removed");
+    try {
+      await api.delete(`/api/budgets/${category}`);
+      const res = await api.get<CategoryBudget[]>("/api/budgets");
+      setBudgetsState(res.data);
+      toast.success("Budget removed");
+    } catch {
+      toast.error("Failed to remove budget");
+    }
   };
 
   if (loading || !user) return null;
