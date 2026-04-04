@@ -1,12 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/AuthContext";
 import NavBar from "@/app/components/NavBar";
 import { api, createTransaction, type TransactionDTO } from "@/lib/api";
+
+/** Resize & compress image client-side before uploading */
+function compressImage(file: File, maxWidth: number, quality: number): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")?.drawImage(img, 0, 0, w, h);
+
+      canvas.toBlob(
+        (blob) => {
+          resolve(
+            blob
+              ? new File([blob], file.name, { type: "image/jpeg" })
+              : file
+          );
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 type Mode = "manual" | "upload";
 
@@ -51,8 +81,11 @@ export default function ScanPage() {
     setScanning(true);
 
     try {
+      // Compress image client-side before uploading (5MB → ~100KB)
+      const compressed = await compressImage(file, 1000, 0.7);
+
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", compressed);
 
       const res = await api.post("/api/receipts/scan", formData, {
         headers: { "Content-Type": "multipart/form-data" },
