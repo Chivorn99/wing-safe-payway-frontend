@@ -1,4 +1,4 @@
-name: Frontend CI
+name: Frontend CI/CD
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
     branches: [ main ]
 
 jobs:
+  # (Testing in GitHub's Cloud)
   build:
     runs-on: ubuntu-latest
 
@@ -31,5 +32,22 @@ jobs:
 
       - name: Build
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:8081
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8081
         run: npm run build
+
+  # (Deploying to your Ubuntu Server)
+  deploy:
+    needs: build 
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Pull and Rebuild Frontend on Server
+        run: |
+          # 1. Go into the frontend folder to pull the new code
+          cd ~/loyfinance-staging/frontend
+          git pull origin main
+          
+          # 2. Go back to the master blueprint folder to rebuild just the frontend
+          cd ~/loyfinance-staging
+          docker compose up -d --build frontend
